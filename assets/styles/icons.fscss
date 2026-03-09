@@ -1,0 +1,35 @@
+@import((*) from icon-mask)
+@icon-base(.icon, 24px)
+@icon-pack()
+
+.toggle-menu{
+  --f-icon-color: var(--primary-color);
+  @icon-size(28px)
+} 
+.toggle-menu:hover{
+@icon-color(#007999)
+} 
+
+  .sidebar {
+    width: 240px;
+    background: #f8fafc;
+    border-right: 1px solid #e2e8f0;
+  }
+  .nav-list { list-style: none; padding: 0; }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 24px;
+    color: #475569;
+    cursor: pointer;
+    gap: 12px;
+  }
+  .nav-item:hover { 
+    background: #eff6ff; 
+    color: #1e40af; 
+    @icon-color(#007999)
+  }
+  .nav-item.active { border-left: 4px solid #6366f1; background: #eef2ff; color: #4338ca; }
+  .label { font-family: sans-serif; font-size: 14px; font-weight: 500; }
+  
+  
