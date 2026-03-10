@@ -79,7 +79,7 @@ Import directly from URLs (works in browser and CLI):
 ```html
 <style>
 @import((flex-x, flex-center) from "flex.fscss")
-@import((card, card-body) from "components/card.fscss")
+@import((card, card-body) from "mycomponents/card.fscss")
 
 .app {
   @flex-center()
@@ -104,7 +104,7 @@ Import directly from URLs (works in browser and CLI):
 
 @root()
 body {
-  background: #f5f5f5;
+  background: #131213;
 }
 
 @cp(.progress-circle)
