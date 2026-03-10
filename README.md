@@ -2,6 +2,8 @@
 
 FSCSS introduces a powerful, JavaScript-like import system for CSS functions. Import specific utilities, rename them, or load entire libraries - all while keeping your styles modular and maintainable.
 
+> import FSCSS initial libraries without quotes, example @import((*) from circle-progress)
+> 
 ## Import Types
 
 1. Named Imports
