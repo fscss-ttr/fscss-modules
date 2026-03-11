@@ -50,7 +50,7 @@ Load all exported functions from a module:
 Import directly from URLs (works in browser and CLI):
 
 ```scss
-@import((btn, btn-primary) from "https://cdn.jsdelivr.net/npm/fscss-buttons@1.0/buttons.fscss")
+@import((btn, btn-primary) from "https://cdn.example/...-buttons@1.0/buttons.fscss")
 
 .button {
   @btn()
