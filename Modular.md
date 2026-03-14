@@ -114,7 +114,7 @@ You can overwrite the array used for the specific function
 Example concept:
 ```
 @arr radius[count(100)]
-@radius-util(100)
+@radius-util()
 ```
 Which might generate utilities only up to 100.
 
