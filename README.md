@@ -60,9 +60,9 @@ Import directly from URLs (works in browser and CLI):
 }
 ```
 
-5. Library Imports
+5. Library Imports 
 
-**Import from fscss initial libraries:**
+**Import from fscss initial libraries:** (https://fscss.devtem.org/libraries) 
 
 ```scss
 @import((
