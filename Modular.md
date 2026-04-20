@@ -20,8 +20,12 @@ This article explains:
 An FSCSS module is simply a stylesheet that contains reusable style definitions.
 
 Example module:
+`./spacing-utils.fscss`
 ```css
 @define radius-util(){`
+.radius-0{
+border-radius: 0;
+}
 @arr radius[count(200)]
 
 .radius-@arr.radius[]{
@@ -40,7 +44,7 @@ Instead, you import it and execute it when you want.
 Example usage:
 
 ```css
-@import((radius-util) from spacing-utils/fscss)
+@import((radius-util) from "./spacing-utils.fscss")
 
 @radius-util()
 ```
