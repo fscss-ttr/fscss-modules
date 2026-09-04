@@ -62,7 +62,7 @@ Import directly from URLs (works in browser and CLI):
 
 5. Library Imports 
 
-**Import from fscss initial libraries:** (https://fscss.devtem.org/libraries) 
+**Import from community libraries by its name, no 'quotes':** (https://fscss.devtem.org/libraries) 
 
 ```scss
 @import((
@@ -75,6 +75,8 @@ Import directly from URLs (works in browser and CLI):
 ```
 
 ## Practical Examples
+
+> From local folders 
 
 **Basic Usage**
 
@@ -96,13 +98,15 @@ Import directly from URLs (works in browser and CLI):
 
 **Progress Circle Component**
 
+> From published lib
+
 ```html
 <style>
 @import((
   circle-progress as cp,
   progress-range as pr,
   progress-root as root
-) from circle-progress/fscss)
+) from circle-progress)
 
 @root()
 body {
@@ -118,7 +122,7 @@ body {
 
 <div class="progress-circle p85">85%</div>
 
-<script src="https://cdn.jsdelivr.net/npm/fscss@1.1.17/exec.min.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/fscss@1.2.0/runtime.min.js" async></script>
 ```
 
 **Remote Styling Library**
@@ -259,7 +263,7 @@ CSS Modules Scoped styles Aliased imports
 1. Include FSCSS executor:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/fscss@1.1.17/exec.min.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/fscss@1.2.0/runtime.min.js" async></script>
 ```
 
 1. Start importing:
