@@ -25,7 +25,7 @@ Import specific functions from a module:
 Rename imports to avoid conflicts or create shorter names:
 
 ```scss
-@import((circle-progress as cp, progress-range as pr) from circle-progress/fscss)
+@import((circle-progress as cp, progress-range as pr) from circle-progress)
 
 @cp(.progress-circle)
 .p75 {
