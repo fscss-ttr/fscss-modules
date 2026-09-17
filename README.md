@@ -279,3 +279,134 @@ CSS Modules Scoped styles Aliased imports
 ```
 
 The new FSCSS import system brings modular, maintainable, and scalable CSS function management to your projects - with the familiar syntax of JavaScript imports!
+
+
+# How `@import` and `@define` communicate in FSCSS
+
+FSCSS modules work like a **publisher–subscriber** contract. A module **registers** mixins with `@define`; a stylesheet **extracts** them with `@import`, then **substitutes** parameters when you call them. Nothing is emitted as CSS until that last step.
+
+---
+
+## Three compiler phases
+
+```text
+┌────────────────────────┐
+│  Module file (source)  │
+│  @define mixin(param)  │  ← 1. REGISTRATION (blueprint in memory)
+└───────────┬────────────┘
+            │
+            ▼
+┌────────────────────────┐
+│  Your stylesheet       │
+│  @import((mixin)…)     │  ← 2. EXTRACTION (name → local scope)
+│  @mixin(value)         │  ← 3. SUBSTITUTION (@use → real tokens → CSS)
+└────────────────────────┘
+```
+
+### 1. Registration (`@define`)
+
+When the compiler sees `@define` in a module, it does **not** output CSS. It stores:
+
+- the body (template string / block)
+- formal parameters and defaults
+
+That entry is a reusable blueprint.
+
+### 2. Extraction (`@import`)
+
+`@import` opens the module, finds the named defines, and exposes them in the **importing file’s** scope.
+
+- Selective: `@import((elevate, badge) from theme-pack)`
+- Wildcard: `@import((*) from theme-pack)`
+- Alias: `@import((elevate as shadow) from theme-pack)`
+
+With `as`, the **alias** is what gets registered locally.
+
+### 3. Substitution (call site)
+
+Calling the mixin passes arguments into the blueprint. Inside the define, `@use(paramName)` is replaced by those values, then the result is compiled to normal CSS.
+
+---
+
+## Rename with `as`
+
+Yes — **`as` fully renames the define for the current stylesheet**.
+
+After aliasing, the **original name is not available** in that file. The change is **local only**: other files and the source module are unchanged.
+
+```fscss
+/* 1. Import and rename */
+@import((circle-progress as clp) from circle-progress);
+
+/* 2. New name works */
+.radial-bar {
+  @clp();
+}
+
+/* 3. Original name fails in this file */
+.loader {
+  @circle-progress(); /* Error: @circle-progress is not defined */
+}
+```
+
+Typical reasons to alias: short names, avoiding clashes between modules, or matching local naming conventions.
+
+---
+
+## End-to-end trace
+
+**Module (`theme-pack.fscss`)**
+
+```fscss
+@define elevate(space: 12px) {
+  box-shadow: 0 @use(space) 20px rgba(0, 0, 0, 0.1);
+  padding: @use(space);
+}
+```
+
+**Consumer (`app.fscss`)**
+
+```fscss
+@import((elevate as shadow) from "theme-pack.fscss");
+
+.card {
+  @shadow(16px);
+}
+```
+
+**Output CSS**
+
+```css
+.card {
+  box-shadow: 0 16px 20px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+}
+```
+
+1. Compiler stores blueprint `elevate` with default `space: 12px`  
+2. Import maps that blueprint to local name `shadow`  
+3. `@shadow(16px)` substitutes `@use(space)` -> `16px` and emits CSS  
+
+---
+
+## Mental model
+
+| Piece | Role |
+|--------|------|
+| `@define` | Publish a parameterized blueprint |
+| `@import` | Subscribe / extract into this file |
+| `as` | Local rename (original name gone here) |
+| `@use(name)` | Insert the argument at compile time |
+| Call `@name(...)` | Run substitution -> CSS |
+
+`@import` does not “run” the module. It only bridges registered defines into your file. Communication completes when you **invoke** the mixin and `@use` is filled in.
+
+---
+
+## Related
+
+- Naming conflicts >> alias with `as`  
+- Selective imports >> only pull the helpers you need  
+- Nested `@arr` / `rpt` inside defines >> same substitution rules; parameters and array indexes expand when the mixin runs  
+
+That’s the whole pipeline: **register -> extract (optional rename) -> substitute -> CSS**.
