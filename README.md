@@ -122,7 +122,7 @@ body {
 
 <div class="progress-circle p85">85%</div>
 
-<script src="https://cdn.jsdelivr.net/npm/fscss@1.2.0/runtime.min.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/fscss@1.2.4/runtime.min.js" async></script>
 ```
 
 **Remote Styling Library**
@@ -263,7 +263,7 @@ CSS Modules Scoped styles Aliased imports
 1. Include FSCSS executor:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/fscss@1.2.0/runtime.min.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/fscss@1.2.4/runtime.min.js" async></script>
 ```
 
 1. Start importing:
