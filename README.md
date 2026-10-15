@@ -1,16 +1,97 @@
-# FSCSS Import System Guide 
+# FSCSS Import System Guide
 
-FSCSS introduces a powerful, JavaScript-like import system for CSS functions. Import specific utilities, rename them, or load entire libraries - all while keeping your styles modular and maintainable.
+FSCSS has a JavaScript-like import system for **`@define` mixins**: pull specific utilities, rename them, load a whole library, or fetch a remote `.fscss` file — while keeping styles modular.
 
-https://github.com/fscss-ttr/fscss-modules/blob/main/Modular.md
+**Registry libraries** (no quotes):
 
-> import FSCSS initial libraries without quotes, example @import((*) from circle-progress)
-> 
-## Import Types
+```scss
+@import((*) from circle-progress)
+@import((*) from st-core@v2)
+@import((mirror as mirror-array) from fscss:micros)
+```
 
-1. Named Imports
+Catalog: [fscss.devtem.org/libraries](https://fscss.devtem.org/libraries)  
+**Recommended:** FSCSS **1.2.6+** — [release notes](https://github.com/Figsh/xfscss/releases/tag/v1.2.6)
 
-Import specific functions from a module:
+
+---
+
+## How `@import` and `@define` communicate
+
+Modules follow a **publisher → subscriber** contract. `@define` **registers** a blueprint; `@import` **extracts** it into the current file; a **call** runs **substitution** and emits CSS.
+
+```text
+┌────────────────────────┐
+│  Module file (source)  │
+│  @define mixin(param)  │  ← 1. REGISTRATION (blueprint only — no CSS yet)
+└───────────┬────────────┘
+            │
+            ▼
+┌────────────────────────┐
+│  Your stylesheet       │
+│  @import((mixin)…)     │  ← 2. EXTRACTION (into this file’s scope)
+│  @mixin(value)         │  ← 3. SUBSTITUTION (@use → tokens → CSS)
+└────────────────────────┘
+```
+
+| Phase | What happens |
+|--------|----------------|
+| **Registration** | `@define` stores body + parameters; nothing is printed as CSS |
+| **Extraction** | `@import` binds those names (or aliases) **in this file only** |
+| **Substitution** | `@name(args)` fills `@use(param)` and compiles to normal CSS |
+
+`@import` does not “run” the module. CSS appears only when you **invoke** the mixin.
+
+---
+
+## Rename with `as` (v1.2.6 rules)
+
+- `as` **fully renames** the binding for the **current file**.
+- The **original name is undefined** in that file.
+- Other files and the source module are unchanged.
+- **No re-`@define` wrapper** is required to pass a name along.
+- A file **owns** the names it imported (including aliases). Another file can import **those owned names** from it.
+
+```scss
+/* style.fscss — owns m, not mirror */
+@import((mirror as m) from fscss:micros)
+
+/* app.fscss — owns mirr; m and mirror are undefined here */
+@import((m as mirr) from "style.fscss")
+@import((
+  ou-root,
+  avatar-overlap,
+  circle-overlap,
+  ou-reduced-motion
+) from overlapui)
+
+@arr colors[#1E2783, #8C29B2, #C41348]
+@mirr(colors, indices)
+exec(_log, "@arr.indices")
+
+@ou-root()
+@avatar-overlap(.team-faces)
+@circle-overlap(.fab-menu)
+@ou-reduced-motion()
+```
+
+```text
+fscss:micros   defines  mirror
+      │
+style.fscss    import mirror as m     → owns m
+      │
+app.fscss      import m as mirr       → owns mirr
+               @mirr(...)             ✅
+               @m / @mirror           ❌ in app
+```
+
+Typical uses for `as`: shorter names, avoiding clashes, local naming style.
+
+---
+
+## Import types
+
+### 1. Named imports
 
 ```scss
 @import((flex-x, flex-center, flex-wrap-center) from flex-control)
@@ -20,9 +101,7 @@ Import specific functions from a module:
 }
 ```
 
-2. Alias Imports
-
-Rename imports to avoid conflicts or create shorter names:
+### 2. Alias imports
 
 ```scss
 @import((circle-progress as cp, progress-range as pr) from circle-progress)
@@ -33,9 +112,7 @@ Rename imports to avoid conflicts or create shorter names:
 }
 ```
 
-3. Import Everything
-
-Load all exported functions from a module:
+### 3. Import everything
 
 ```scss
 @import((*) from "animations.fscss")
@@ -47,12 +124,12 @@ Load all exported functions from a module:
 }
 ```
 
-4. Remote Imports
+### 4. Remote imports
 
-Import directly from URLs (works in browser and CLI):
+Quoted URL — browser runtime and CLI (network required):
 
 ```scss
-@import((btn, btn-primary) from "https://cdn.example/...-buttons@1.0/buttons.fscss")
+@import((btn, btn-primary) from "https://cdn.example/buttons@1.0/buttons.fscss")
 
 .button {
   @btn()
@@ -60,9 +137,7 @@ Import directly from URLs (works in browser and CLI):
 }
 ```
 
-5. Library Imports 
-
-**Import from community libraries by its name, no 'quotes':** (https://fscss.devtem.org/libraries) 
+### 5. Library / registry imports (no quotes)
 
 ```scss
 @import((
@@ -71,34 +146,58 @@ Import directly from URLs (works in browser and CLI):
   progress-root as root
 ) from circle-progress)
 
-@import((*) from counterx)
+@import((*) from st-core@v2)
+@import((mirror as m) from fscss:micros)
 ```
 
-## Practical Examples
+### 6. Local paths
 
-> From local folders 
-
-**Basic Usage**
-
-```html
-<style>
+```scss
 @import((flex-x, flex-center) from "flex.fscss")
 @import((card, card-body) from "mycomponents/card.fscss")
-
-.app {
-  @flex-center()
-}
-
-.user-card {
-  @card()
-  @card-body()
-}
-</style>
 ```
 
-**Progress Circle Component**
+---
 
-> From published lib
+## End-to-end trace
+
+**Module (`theme-pack.fscss`)**
+
+```scss
+@define elevate(space: 12px) {
+  box-shadow: 0 @use(space) 20px rgba(0, 0, 0, 0.1);
+  padding: @use(space);
+}
+```
+
+**Consumer (`app.fscss`)**
+
+```scss
+@import((elevate as shadow) from "theme-pack.fscss")
+
+.card {
+  @shadow(16px)
+}
+```
+
+**CSS output**
+
+```css
+.card {
+  box-shadow: 0 16px 20px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+}
+```
+
+1. Store blueprint `elevate` (default `space: 12px`)  
+2. Map to local name `shadow`  
+3. `@shadow(16px)` → substitute → CSS  
+
+---
+
+## Practical examples
+
+### Progress circle (published lib)
 
 ```html
 <style>
@@ -109,283 +208,142 @@ Import directly from URLs (works in browser and CLI):
 ) from circle-progress)
 
 @root()
-body {
-  background: #131213;
-}
+body { background: #131213; }
 
 @cp(.progress-circle)
-
-.p85 {
-  @pr(85)
-}
+.p85 { @pr(85) }
 </style>
 
 <div class="progress-circle p85">85%</div>
-
-<script src="https://cdn.jsdelivr.net/npm/fscss@1.2.4/runtime.min.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/fscss@1.2.6/runtime.min.js" defer></script>
 ```
 
-**Remote Styling Library**
+### Local flex module
 
 ```scss
-@import((flex-center, flex-between) from "https://styles.example/base/flex.fscss")
-@import((shadow-lg, shadow-sm) from "https://styles.example/effects/shadow.fscss")
-@import((btn, btn-large) from "https://styles.example/ui/buttons.fscss")
-
-.navbar {
-  @flex-between()
-  @shadow-sm()
+/* flex.fscss */
+@define flex-x() {
+  display: flex;
+  flex-direction: row;
 }
 
-.cta-button {
-  @btn()
-  @btn-large()
+@define flex-center() {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 ```
 
-## Error Handling
-
-FSCSS provides clear error messages for common mistakes:
-
-Invalid Alias
-
 ```scss
-@import((* as all) from "style.fscss")
-// Warning: Cannot assign "*" to alias
-```
+@import((flex-center) from "flex.fscss")
 
-Empty Alias
-
-```scss
-@import((flex-x as) from "style.fscss")
-// Warning: Can't assign flex-x to invalid or empty value
-```
-
-Undefined Import
-
-```scss
-@import((nonexistent) from "style.fscss")
-// Error: "nonexistent" is not defined with @define in style.fscss
-```
-
-### Examples
-
-Local Module
-
-```scss
-// flex.fscss
-@define flex-x(){
-  display: flex
-  flex-direction: row
+.app {
+  @flex-center()
 }
-
-@define flex-center(){
-  display: flex
-  justify-content: center
-  align-items: center
-}
-
-@define flex-wrap(){
-  flex-wrap: wrap
-} 
 ```
-https://fscss.devtem.org/define
 
-## Backward Compatibility
+More on defines: [fscss.devtem.org/define](https://fscss.devtem.org/define)
 
-**Old import syntax still works:**
+### Micros via intermediate file (1.2.6)
+
+```scss
+/* style.fscss */
+@import((mirror as m) from fscss:micros)
+```
+
+```scss
+/* main.fscss */
+@import((m as mirr) from "style.fscss")
+@mirr(colors, indices)
+```
+
+If `fscss:micros` does not resolve in your environment:
+
+```scss
+@import((mirror as m) from "https://cdn.jsdelivr.net/gh/fscss-ttr/FSCSS@main/xf/styles/fscss/micros.fscss")
+```
+
+---
+
+## Error handling
+
+| Case | Example | Result |
+|------|---------|--------|
+| Invalid alias | `@import((* as all) from "style.fscss")` | Warning: cannot assign `*` to alias |
+| Empty alias | `@import((flex-x as) from "style.fscss")` | Warning: invalid / empty alias |
+| Missing define | `@import((nonexistent) from "style.fscss")` | Error: not defined with `@define` |
+| Wrong name after `as` | Import as `cp`, call `@circle-progress()` | Error: not defined **in this file** |
+
+---
+
+## Backward compatibility
+
+Older forms still work:
 
 ```scss
 @import(exec(location))
 @import(exec(_init library/extension))
 ```
 
-This ensures:
+Existing projects can migrate gradually.
 
-· Existing projects won't break
-· Gradual migration possible
-· Legacy code support
+---
 
-## Browser & CLI Support
+## Browser & CLI
 
-All import types work in both environments:
+| Environment | Behavior |
+|-------------|----------|
+| **Browser** | Runtime (`runtime.js` / `esm.js`) processes imports |
+| **CLI** | `fscss in.fscss out.css` resolves local paths; URLs need network |
+| **Production** | Prefer CLI → ship CSS only |
 
-· Browser: Processed at runtime by FSCSS js scripts
-· CLI: Compiled during build process
-· Remote: Fetch and process from any URL
-· Local: Import from file system
+---
 
-## Best Practices
+## Best practices
 
-1. Use Aliases for Long Names
-   ```scss
-   @import((circle-progress as cp) from "progress.fscss")
-   ```
-2. Group Related Imports
-   ```scss
-   @import((flex-x, flex-y, flex-center) from "flex.fscss")
-   @import((grid-12, grid-gap) from "grid.fscss")
-   ```
-3. Library Imports for Projects
-   ```scss
-   @import((*) from "my-design-system")
-   ```
+1. **Alias long names:** `@import((circle-progress as cp) from circle-progress)`  
+2. **Selective imports:** only the defines you call  
+3. **Group related names** in one `@import`  
+4. **Registry names without quotes;** paths and URLs **with quotes**  
+5. **Remember file-local renames** — call the alias you own in *this* file  
+6. **Pin a compiler version** in docs and CI (e.g. 1.2.6)
 
-### Comparison With Other Systems
+---
 
-Technology Feature FSCSS Equivalent
-JavaScript Named imports @import((name) from ...)
-Sass Partials Local .fscss files
-Tailwind Plugins Library imports
-CSS Modules Scoped styles Aliased imports
+## Comparison
 
-### Quick Reference
+| Idea | FSCSS |
+|------|--------|
+| JS named imports | `@import((name) from …)` |
+| JS `import as` | `name as alias` |
+| Sass partials | Local `"path.fscss"` |
+| Plugin / package | Registry: `from library-name` |
+
+---
+
+## Quick reference
 
 ```scss
-// Named import
-@import((function1, function2) from "path")
+// Named
+@import((function1, function2) from "path.fscss")
 
-// With alias
-@import((original as alias) from "path")
+// Alias
+@import((original as alias) from "path.fscss")
 
 // Everything
-@import((*) from "path")
+@import((*) from "path.fscss")
 
 // Remote
 @import((name) from "https://url/file.fscss")
 
-// Library
+// Registry (no quotes)
 @import((*) from library-name)
+@import((mirror as m) from fscss:micros)
+
+// Chain rename across files (1.2.6 — no re-define)
+// style.fscss:  @import((mirror as m) from fscss:micros)
+// app.fscss:    @import((m as mirr) from "style.fscss")
 ```
-
-## Getting Started
-
-1. Include FSCSS executor:
-
-```html
-<script src="https://cdn.jsdelivr.net/npm/fscss@1.2.4/runtime.min.js" async></script>
-```
-
-1. Start importing:
-
-```html
-<style>
-@import((flex-center) from "https://cdn.example/flex.fscss")
-
-.container {
-  @flex-center()
-}
-</style>
-```
-
-The new FSCSS import system brings modular, maintainable, and scalable CSS function management to your projects - with the familiar syntax of JavaScript imports!
-
-
-# How `@import` and `@define` communicate in FSCSS
-
-FSCSS modules work like a **publisher–subscriber** contract. A module **registers** mixins with `@define`; a stylesheet **extracts** them with `@import`, then **substitutes** parameters when you call them. Nothing is emitted as CSS until that last step.
-
----
-
-## Three compiler phases
-
-```text
-┌────────────────────────┐
-│  Module file (source)  │
-│  @define mixin(param)  │  ← 1. REGISTRATION (blueprint in memory)
-└───────────┬────────────┘
-            │
-            ▼
-┌────────────────────────┐
-│  Your stylesheet       │
-│  @import((mixin)…)     │  ← 2. EXTRACTION (name → local scope)
-│  @mixin(value)         │  ← 3. SUBSTITUTION (@use → real tokens → CSS)
-└────────────────────────┘
-```
-
-### 1. Registration (`@define`)
-
-When the compiler sees `@define` in a module, it does **not** output CSS. It stores:
-
-- the body (template string / block)
-- formal parameters and defaults
-
-That entry is a reusable blueprint.
-
-### 2. Extraction (`@import`)
-
-`@import` opens the module, finds the named defines, and exposes them in the **importing file’s** scope.
-
-- Selective: `@import((elevate, badge) from theme-pack)`
-- Wildcard: `@import((*) from theme-pack)`
-- Alias: `@import((elevate as shadow) from theme-pack)`
-
-With `as`, the **alias** is what gets registered locally.
-
-### 3. Substitution (call site)
-
-Calling the mixin passes arguments into the blueprint. Inside the define, `@use(paramName)` is replaced by those values, then the result is compiled to normal CSS.
-
----
-
-## Rename with `as`
-
-Yes — **`as` fully renames the define for the current stylesheet**.
-
-After aliasing, the **original name is not available** in that file. The change is **local only**: other files and the source module are unchanged.
-
-```fscss
-/* 1. Import and rename */
-@import((circle-progress as clp) from circle-progress);
-
-/* 2. New name works */
-.radial-bar {
-  @clp();
-}
-
-/* 3. Original name fails in this file */
-.loader {
-  @circle-progress(); /* Error: @circle-progress is not defined */
-}
-```
-
-Typical reasons to alias: short names, avoiding clashes between modules, or matching local naming conventions.
-
----
-
-## End-to-end trace
-
-**Module (`theme-pack.fscss`)**
-
-```fscss
-@define elevate(space: 12px) {
-  box-shadow: 0 @use(space) 20px rgba(0, 0, 0, 0.1);
-  padding: @use(space);
-}
-```
-
-**Consumer (`app.fscss`)**
-
-```fscss
-@import((elevate as shadow) from "theme-pack.fscss");
-
-.card {
-  @shadow(16px);
-}
-```
-
-**Output CSS**
-
-```css
-.card {
-  box-shadow: 0 16px 20px rgba(0, 0, 0, 0.1);
-  padding: 16px;
-}
-```
-
-1. Compiler stores blueprint `elevate` with default `space: 12px`  
-2. Import maps that blueprint to local name `shadow`  
-3. `@shadow(16px)` substitutes `@use(space)` -> `16px` and emits CSS  
 
 ---
 
@@ -393,20 +351,18 @@ Typical reasons to alias: short names, avoiding clashes between modules, or matc
 
 | Piece | Role |
 |--------|------|
-| `@define` | Publish a parameterized blueprint |
-| `@import` | Subscribe / extract into this file |
-| `as` | Local rename (original name gone here) |
-| `@use(name)` | Insert the argument at compile time |
-| Call `@name(...)` | Run substitution -> CSS |
+| `@define` | Publish parameterized blueprint |
+| `@import` | Extract into **this** file |
+| `as` | Local rename; original undefined here |
+| File ownership | Downstream imports **your** local names |
+| `@use(name)` | Parameter hole in the blueprint |
+| `@name(...)` | Substitute → CSS |
 
-`@import` does not “run” the module. It only bridges registered defines into your file. Communication completes when you **invoke** the mixin and `@use` is filled in.
+**Register → extract (optional rename) → substitute → CSS.**
 
 ---
 
 ## Related
 
-- Naming conflicts >> alias with `as`  
-- Selective imports >> only pull the helpers you need  
-- Nested `@arr` / `rpt` inside defines >> same substitution rules; parameters and array indexes expand when the mixin runs  
-
-That’s the whole pipeline: **register -> extract (optional rename) -> substitute -> CSS**.
+- [Define](https://fscss.devtem.org/define) · [Libraries](https://fscss.devtem.org/libraries) · [API](https://fscss.devtem.org/api)  
+- [v1.2.6](https://github.com/Figsh/xfscss/releases/tag/v1.2.6) · [Figsh/xfscss](https://github.com/Figsh/xfscss)
